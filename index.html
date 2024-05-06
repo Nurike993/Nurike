@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0">
+    <title>Поиск книги</title>
+</head>
+<body>
+    <h1>Поиск книги</h1>
+    <form id="bookSearchForm">
+        <label for="bookInput">Введите название книги:</label>
+        <input type="text" id="bookInput" name="bookInput">
+        <button type="submit">Поиск</button>
+    </form>
+
+    <div id="bookList"></div>
+
+    <script>
+        const form = document.getElementById('bookSearchForm');
+        const bookInput = document.getElementById('bookInput');
+        const bookList = document.getElementById('bookList');
+        let currentPurchaseForm = null;
+
+        form.addEventListener('submit', function(event) {
+            event.preventDefault();
+            const bookTitle = bookInput.value.trim();
+            if (bookTitle !== '') {
+                searchBook(bookTitle);
+            }
+        });
+
+        async function searchBook(title) {
+            const apiKey = 'AIzaSyBJuX9PmRyb5PG9ckHV6gOVnR5h881R4u4';
+            const url = `https://www.googleapis.com/books/v1/volumes?q=${encodeURIComponent(title)}&key=${apiKey}`;
+
+            try {
+                const response = await fetch(url);
+                const data = await response.json();
+
+                if (data.items && data.items.length > 0) {
+                    renderBooks(data.items);
+                } else {
+                    bookList.textContent = 'Книга не найдена';
+                }
+            } catch (error) {
+                console.error('Ошибка при выполнении запроса:', error);
+                bookList.textContent = 'Произошла ошибка. Попробуйте еще раз.';
+            }
+        }
+
+        function renderBooks(books) {
+            bookList.innerHTML = '';
+            books.forEach(book => {
+                const title = book.volumeInfo.title;
+                const author = book.volumeInfo.authors ? book.volumeInfo.authors.join(', ') : 'Автор неизвестен';
+                const bookItem = document.createElement('div');
+                bookItem.innerHTML = `
+                    <h2>${title}</h2>
+                    <p><strong>Автор(ы):</strong> ${author}</p>
+                    <button class="buyButton">Купить</button>
+                `;
+                const buyButton = bookItem.querySelector('.buyButton');
+                buyButton.addEventListener('click', () => {
+                    if (currentPurchaseForm) {
+                        currentPurchaseForm.remove();
+                    }
+                    renderPurchaseForm(bookItem, title, author);
+                });
+                bookList.appendChild(bookItem);
+            });
+        }
+
+        function renderPurchaseForm(bookItem, bookTitle, bookAuthor) {
+            const purchaseForm = document.createElement('div');
+            purchaseForm.innerHTML = `
+                <h2>Оформление заказа</h2>
+                <form id="purchaseFormInputs" action="https://sheetdb.io/api/v1/c1s2j1vg3mhsu" method="post">
+                    <input type="hidden" id="bookTitleInput" name="data[bookTitle]" value="${bookTitle}">
+                    <input type="hidden" id="bookAuthorInput" name="data[bookAuthor]" value="${bookAuthor}">
+                    <input type="text" placeholder="Имя" name="data[name]" required>
+                    <input type="email" placeholder="Почта" name="data[email]" required>
+                    <input type="tel" placeholder="Номер" name="data[number]" required>
+                    <input type="text" placeholder="Адрес" name="data[adress]" required>
+                    <button type="submit">Отправить</button>
+                </form>
+            `;
+            bookItem.appendChild(purchaseForm);
+            currentPurchaseForm = purchaseForm;
+        }
+    </script>
+</body>
+</html>
